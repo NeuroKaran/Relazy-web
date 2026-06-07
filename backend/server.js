@@ -130,6 +130,36 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// Get user's rooms (created and joined)
+app.get('/api/users/:id/rooms', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const rooms = await db.getRoomsForUser(userId);
+    
+    const created = [];
+    const joined = [];
+    
+    rooms.forEach(room => {
+      const hostId = room.hostId || Object.keys(room.members)[0];
+      const roomSummary = {
+        roomCode: room.roomCode,
+        habitsCount: room.habits ? room.habits.length : 0,
+        membersCount: room.members ? Object.keys(room.members).length : 0,
+      };
+      
+      if (hostId === userId) {
+        created.push(roomSummary);
+      } else {
+        joined.push(roomSummary);
+      }
+    });
+    
+    res.json({ created, joined });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get achievements list
 app.get('/api/achievements', (req, res) => {
   res.json(ACHIEVEMENTS);
@@ -156,6 +186,7 @@ app.post('/api/rooms', async (req, res) => {
 
     const initialRoom = {
       roomCode,
+      hostId,
       habits: [
         { id: 'h1', title: 'Drink a glass of water', description: 'Stay hydrated', emoji: '💧', completed: false, streak: 0, duration: '5 min', iconType: 'water' },
         { id: 'h2', title: 'Meditate for 5 minutes', description: 'Find your calm', emoji: '🧘', completed: false, streak: 0, duration: '5 min', iconType: 'meditate' },

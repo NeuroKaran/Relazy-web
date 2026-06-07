@@ -138,6 +138,17 @@ async function updateRoom(code, updates) {
   return localDb.rooms[formattedCode];
 }
 
+async function getRoomsForUser(userId) {
+  if (isMongo) {
+    return await mongoDb.collection('rooms').find({
+      [`members.${userId}`]: { $exists: true }
+    }).toArray();
+  }
+  return Object.values(localDb.rooms).filter(
+    room => room.members && room.members[userId]
+  );
+}
+
 // Helper to count totals for logging
 async function getStats() {
   if (isMongo) {
@@ -161,5 +172,6 @@ module.exports = {
   getRoom,
   createRoom,
   updateRoom,
+  getRoomsForUser,
   getStats
 };

@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import WelcomePage from './pages/WelcomePage';
 import HostRoomPage from './pages/HostRoomPage';
 import DashboardPage from './pages/DashboardPage';
+import MyRoomsModal from './components/MyRoomsModal';
 
 export default function App() {
   const { items } = useToast();
@@ -19,7 +20,20 @@ export default function App() {
   const [phase, setPhase] = useState('welcome'); // 'welcome' | 'host' | 'dashboard'
   const [roomCode, setRoomCode] = useState('');
   const [roomState, setRoomState] = useState(null);
+  const [userRooms, setUserRooms] = useState({ created: [], joined: [] });
+  const [showRoomsModal, setShowRoomsModal] = useState(false);
   const pollRef = useRef(null);
+
+  const fetchUserRooms = async (userId) => {
+    const id = userId || user?.id;
+    if (!id) return;
+    try {
+      const rooms = await api.getUserRooms(id);
+      setUserRooms(rooms);
+    } catch (err) {
+      console.error('Error fetching user rooms:', err);
+    }
+  };
 
   // Load saved session
   useEffect(() => {
@@ -31,7 +45,11 @@ export default function App() {
         api.getUser(u.id).then(fresh => {
           setUser(fresh);
           localStorage.setItem('relazy_user', JSON.stringify(fresh));
-        }).catch(() => setUser(u));
+          fetchUserRooms(fresh.id);
+        }).catch(() => {
+          setUser(u);
+          fetchUserRooms(u.id);
+        });
       } catch { /* ignore */ }
     }
 
@@ -68,6 +86,7 @@ export default function App() {
     const u = await api.login(name, password);
     setUser(u);
     localStorage.setItem('relazy_user', JSON.stringify(u));
+    fetchUserRooms(u.id);
     notify('Welcome back, ' + u.name + '! 🎉');
   };
 
@@ -75,6 +94,7 @@ export default function App() {
     const u = await api.register(name, password, avatar);
     setUser(u);
     localStorage.setItem('relazy_user', JSON.stringify(u));
+    fetchUserRooms(u.id);
     notify('Account created! Let\'s go! 🚀');
   };
 
@@ -83,6 +103,7 @@ export default function App() {
     setPhase('welcome');
     setRoomCode('');
     setRoomState(null);
+    setUserRooms({ created: [], joined: [] });
     localStorage.removeItem('relazy_user');
     localStorage.removeItem('relazy_room');
     notify('Logged out 👋');
@@ -101,6 +122,7 @@ export default function App() {
       localStorage.setItem('relazy_room', room.roomCode);
       setPhase('host');
       refreshUser();
+      fetchUserRooms(user.id);
       notify('Room ' + room.roomCode + ' created! 👑');
     } catch (err) {
       console.error('handleHost error:', err);
@@ -119,6 +141,7 @@ export default function App() {
       localStorage.setItem('relazy_room', code);
       setPhase('dashboard');
       refreshUser();
+      fetchUserRooms(user.id);
       notify('Joined room ' + code + '! 🤝');
     } catch (err) {
       console.error('handleJoin error:', err);
@@ -201,7 +224,9 @@ export default function App() {
     <>
       <Toast items={items} />
       <Navbar user={user} roomCode={phase === 'dashboard' ? roomCode : null}
-        onBack={phase !== 'welcome' ? handleBack : null} onLogout={handleLogout} />
+        onBack={phase !== 'welcome' ? handleBack : null} onLogout={handleLogout}
+        totalRooms={userRooms.created.length + userRooms.joined.length}
+        onOpenRooms={() => { fetchUserRooms(); setShowRoomsModal(true); }} />
 
       {phase === 'welcome' && (
         <WelcomePage user={user} onHost={handleHost} onJoin={handleJoin} />
@@ -217,6 +242,14 @@ export default function App() {
         <DashboardPage user={user} roomState={roomState} roomCode={roomCode}
           onToggleHabit={handleToggleHabit} onSimulate={handleSimulate}
           onAddAI={handleAddAI} onAddHabit={handleAddHabit} onRefreshUser={refreshUser} />
+      )}
+
+      {showRoomsModal && (
+        <MyRoomsModal
+          rooms={userRooms}
+          onClose={() => setShowRoomsModal(false)}
+          onSelectRoom={handleJoin}
+        />
       )}
     </>
   );

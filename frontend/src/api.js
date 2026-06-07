@@ -15,6 +15,7 @@ export const api = {
   register: (name, password, avatar) => request('/api/auth/register', { method: 'POST', body: { name, password, avatar } }),
   login: (name, password) => request('/api/auth/login', { method: 'POST', body: { name, password } }),
   getUser: (id) => request(`/api/users/${id}`),
+  getUserRooms: (userId) => request(`/api/users/${userId}/rooms`),
   getAchievements: () => request('/api/achievements'),
   hostRoom: (hostId, hostName, hostAvatar) => request('/api/rooms', { method: 'POST', body: { hostId, hostName, hostAvatar, date: todayStr() } }),
   getRoom: (code) => request(`/api/rooms/${code}`),
