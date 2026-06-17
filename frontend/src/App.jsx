@@ -35,10 +35,22 @@ export default function App() {
     }
   };
 
-  // Load saved session
+  // Load saved session (with 30-day expiry)
   useEffect(() => {
     const saved = localStorage.getItem('relazy_user');
+    const sessionTime = localStorage.getItem('relazy_session_time');
+    
     if (saved) {
+      // Check if session is still valid (30 days)
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      if (sessionTime && (Date.now() - parseInt(sessionTime, 10)) > THIRTY_DAYS_MS) {
+        // Session expired — clear everything
+        localStorage.removeItem('relazy_user');
+        localStorage.removeItem('relazy_room');
+        localStorage.removeItem('relazy_session_time');
+        return;
+      }
+      
       try {
         const u = JSON.parse(saved);
         // Refresh from server
@@ -86,6 +98,7 @@ export default function App() {
     const u = await api.login(name, password);
     setUser(u);
     localStorage.setItem('relazy_user', JSON.stringify(u));
+    localStorage.setItem('relazy_session_time', Date.now().toString());
     fetchUserRooms(u.id);
     notify('Welcome back, ' + u.name + '! 🎉');
   };
@@ -94,6 +107,7 @@ export default function App() {
     const u = await api.register(name, password, avatar);
     setUser(u);
     localStorage.setItem('relazy_user', JSON.stringify(u));
+    localStorage.setItem('relazy_session_time', Date.now().toString());
     fetchUserRooms(u.id);
     notify('Account created! Let\'s go! 🚀');
   };
@@ -106,6 +120,7 @@ export default function App() {
     setUserRooms({ created: [], joined: [] });
     localStorage.removeItem('relazy_user');
     localStorage.removeItem('relazy_room');
+    localStorage.removeItem('relazy_session_time');
     notify('Logged out 👋');
   };
 
@@ -207,6 +222,23 @@ export default function App() {
     localStorage.removeItem('relazy_room');
   };
 
+  const handleDeleteRoom = async (code) => {
+    try {
+      await api.deleteRoom(code, user.id);
+      // If we're currently in the deleted room, go back to welcome
+      if (roomCode === code) {
+        setPhase('welcome');
+        setRoomCode('');
+        setRoomState(null);
+        localStorage.removeItem('relazy_room');
+      }
+      fetchUserRooms(user.id);
+      notify('Room ' + code + ' deleted 🗑️');
+    } catch (err) {
+      notify('Error: ' + err.message);
+    }
+  };
+
   // ── Render ──
   if (!user) {
     return (
@@ -249,6 +281,8 @@ export default function App() {
           rooms={userRooms}
           onClose={() => setShowRoomsModal(false)}
           onSelectRoom={handleJoin}
+          onDeleteRoom={handleDeleteRoom}
+          userId={user.id}
         />
       )}
     </>

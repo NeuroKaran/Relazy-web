@@ -187,6 +187,7 @@ app.post('/api/rooms', async (req, res) => {
     const initialRoom = {
       roomCode,
       hostId,
+      createdAt: new Date().toISOString(),
       habits: [
         { id: 'h1', title: 'Drink a glass of water', description: 'Stay hydrated', emoji: '💧', completed: false, streak: 0, duration: '5 min', iconType: 'water' },
         { id: 'h2', title: 'Meditate for 5 minutes', description: 'Find your calm', emoji: '🧘', completed: false, streak: 0, duration: '5 min', iconType: 'meditate' },
@@ -210,6 +211,32 @@ app.post('/api/rooms', async (req, res) => {
     await grantAchievement(hostId, 'room_host');
 
     res.status(201).json(initialRoom);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete Room (host only)
+app.delete('/api/rooms/:code', async (req, res) => {
+  try {
+    const code = req.params.code.toUpperCase();
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    const room = await db.getRoom(code);
+    if (!room) return res.status(404).json({ error: 'Room not found.' });
+
+    // Only the host can delete the room
+    const hostId = room.hostId || Object.keys(room.members)[0];
+    if (hostId !== userId) {
+      return res.status(403).json({ error: 'Only the room host can delete this room.' });
+    }
+
+    await db.deleteRoom(code);
+    res.json({ success: true, roomCode: code });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

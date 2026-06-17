@@ -149,6 +149,18 @@ async function getRoomsForUser(userId) {
   );
 }
 
+async function deleteRoom(code) {
+  const formattedCode = code.toUpperCase();
+  if (isMongo) {
+    const result = await mongoDb.collection('rooms').deleteOne({ roomCode: formattedCode });
+    return result.deletedCount > 0;
+  }
+  if (!localDb.rooms[formattedCode]) return false;
+  delete localDb.rooms[formattedCode];
+  saveJsonDb();
+  return true;
+}
+
 // Helper to count totals for logging
 async function getStats() {
   if (isMongo) {
@@ -172,6 +184,7 @@ module.exports = {
   getRoom,
   createRoom,
   updateRoom,
+  deleteRoom,
   getRoomsForUser,
   getStats
 };

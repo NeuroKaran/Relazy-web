@@ -1,14 +1,29 @@
 import { useState } from 'react';
 
-export default function MyRoomsModal({ rooms, onClose, onSelectRoom }) {
+export default function MyRoomsModal({ rooms, onClose, onSelectRoom, onDeleteRoom, userId }) {
   const [activeTab, setActiveTab] = useState('created'); // 'created' | 'joined'
   const [copiedCode, setCopiedCode] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const handleCopyCode = (code, e) => {
     e.stopPropagation();
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 1500);
+  };
+
+  const handleDelete = (code, e) => {
+    e.stopPropagation();
+    if (confirmDelete === code) {
+      // Second click = confirmed
+      onDeleteRoom(code);
+      setConfirmDelete(null);
+    } else {
+      // First click = show confirmation
+      setConfirmDelete(code);
+      // Auto-reset after 3 seconds
+      setTimeout(() => setConfirmDelete(prev => prev === code ? null : prev), 3000);
+    }
   };
 
   const createdRooms = rooms?.created || [];
@@ -109,17 +124,43 @@ export default function MyRoomsModal({ rooms, onClose, onSelectRoom }) {
                   </div>
                 </div>
 
-                <button
-                  className="btn btn-primary btn-sm"
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  Enter ⚡
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Delete button — only on Created tab */}
+                  {activeTab === 'created' && onDeleteRoom && (
+                    <button
+                      onClick={(e) => handleDelete(room.roomCode, e)}
+                      style={{
+                        background: confirmDelete === room.roomCode ? '#fee2e2' : 'none',
+                        border: confirmDelete === room.roomCode ? '1.5px solid #fca5a5' : '1.5px solid transparent',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        padding: '5px 8px',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color: confirmDelete === room.roomCode ? '#dc2626' : 'var(--gray-400)',
+                        fontWeight: confirmDelete === room.roomCode ? 700 : 400,
+                        transition: 'all 0.2s ease',
+                      }}
+                      title={confirmDelete === room.roomCode ? 'Click again to confirm deletion' : 'Delete room'}
+                    >
+                      {confirmDelete === room.roomCode ? '⚠️ Confirm?' : '🗑️'}
+                    </button>
+                  )}
+
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Enter ⚡
+                  </button>
+                </div>
               </div>
             ))
           )}

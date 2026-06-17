@@ -25,6 +25,7 @@ export const api = {
   toggleHabit: (code, memberId, habitId, date) => request(`/api/rooms/${code}/members/${memberId}/toggle-habit`, { method: 'POST', body: { habitId, date } }),
   addAI: (code, name, avatar) => request(`/api/rooms/${code}/members/ai`, { method: 'POST', body: { name, avatar, date: todayStr() } }),
   simulate: (code, memberId) => request(`/api/rooms/${code}/members/${memberId}/simulate`, { method: 'POST', body: { date: todayStr() } }),
+  deleteRoom: (code, userId) => request(`/api/rooms/${code}`, { method: 'DELETE', body: { userId } }),
 };
 
 function todayStr() {
